@@ -1,0 +1,77 @@
+package main
+
+import (
+    "bytes"
+    "fmt"
+    "log"
+
+    "MessengerMPM/internal/algs"
+)
+
+func main() {
+    // Создаем экземпляр Serpent
+    cipher := algs.NewSerpentCipher()
+
+    // Генерация ключа с помощью встроенного метода Serpent
+    key := make([]byte, 32) // 256-битный ключ
+    roundKeys, err := cipher.GenerateKeys(key)
+    if err != nil {
+        log.Fatalf("Ошибка генерации ключа: %v", err)
+    }
+    fmt.Printf("Сгенерированные раундовые ключи: %x\n", roundKeys)
+
+    // Устанавливаем ключ
+    if err := cipher.SetKey(key); err != nil {
+        log.Fatalf("Ошибка установки ключа: %v", err)
+    }
+
+    // Создаем контекст с шифром Serpent и настройками
+    context, err := algorithm.NewCryptoSymmetricContext(
+        key,                 // Ключ
+        cipher,              // Алгоритм Serpent
+        algorithm.ECB,       // Режим шифрования (например, ECB)
+        algorithm.Zeros,     // Набивка (например, PKCS7)
+        nil,                 // IV (не используется в ECB)
+        16,                  // Размер блока (16 байт)
+    )
+    if err != nil {
+        log.Fatalf("Ошибка создания контекста: %v", err)
+    }
+
+    // Создаем данные для тестирования
+    data := []byte("Тестовые данные Serpent!")
+    fmt.Printf("Исходные данные: %s\n", data)
+
+    // Добавляем набивку через метод контекста
+    paddedData, err := context.AddPadding(data)
+    if err != nil {
+        log.Fatalf("Ошибка добавления набивки: %v", err)
+    }
+
+    // Шифрование
+    encrypted, err := context.Encrypt(paddedData)
+    if err != nil {
+        log.Fatalf("Ошибка шифрования: %v", err)
+    }
+    fmt.Printf("Зашифрованные данные: %x\n", encrypted)
+
+    // Дешифрование
+    decrypted, err := context.Decrypt(encrypted)
+    if err != nil {
+        log.Fatalf("Ошибка дешифрования: %v", err)
+    }
+
+    // Удаляем набивку через метод контекста
+    unpaddedData, err := context.RemovePadding(decrypted)
+    if err != nil {
+        log.Fatalf("Ошибка удаления набивки: %v", err)
+    }
+    fmt.Printf("Расшифрованные данные: %s\n", unpaddedData)
+
+    // Проверка совпадения исходного текста с расшифрованным
+    if bytes.Equal(data, unpaddedData) {
+        fmt.Println("Шифрование и дешифрование прошли успешно!")
+    } else {
+        fmt.Println("Ошибка: расшифрованные данные не совпадают с исходными!")
+    }
+}

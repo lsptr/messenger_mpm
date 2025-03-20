@@ -1,0 +1,41 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:14
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: user_ms
+      POSTGRES_PASSWORD: password_ms
+      POSTGRES_DB: ms_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"  # Порт для AMQP
+      - "15672:15672" # Порт для управления RabbitMQ (веб-интерфейс)
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+  app:
+    build: .  # Собираем контейнер из Dockerfile в текущей директории
+    container_name: messenger_app
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+      - rabbitmq
+    environment:
+      DB_CONN_STRING: "postgres://user_ms:password_ms@postgres:5432/ms_db"  # Используем имя сервиса "postgres"
+      RABBITMQ_URL: "amqp://user:password@rabbitmq:5672/"
+
+volumes:
+  postgres_data:
+  rabbitmq_data:

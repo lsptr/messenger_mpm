@@ -1,0 +1,155 @@
+package api
+
+// import (
+// 	"MessengerMPM/internal/db"
+// 	"encoding/json"
+// 	"net/http"
+// 	"strconv"
+
+// 	"github.com/gorilla/mux"
+// 	"github.com/jackc/pgx/v4"
+// )
+
+// // Добавление пользователя в чат
+
+// func AddUser(w http.ResponseWriter, r *http.Request) {
+// 	vars := mux.Vars(r)
+// 	chatID := vars["chat_id"]
+// 	if chatID == "" {
+// 		http.Error(w, "Chat ID is required", http.StatusBadRequest)
+// 		return
+// 	}
+
+// 	var request struct {
+// 		Username string `json:"username"`
+// 	}
+// 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+// 		http.Error(w, "Invalid request", http.StatusBadRequest)
+// 		return
+// 	}
+// 	username := request.Username
+
+// 	currentUserID := r.Context().Value("user_id").(int)
+
+// 	// Проверяем, что текущий пользователь является администратором чата
+// 	isAdmin, err := IsAdmin(chatID, currentUserID)
+// 	if err != nil {
+// 		http.Error(w, "Chat not found", http.StatusNotFound)
+// 		return
+// 	}
+// 	if !isAdmin {
+// 		http.Error(w, "Adding forbidden", http.StatusForbidden)
+// 		return
+// 	}
+
+// 	userIDToAdd, err := GetUser(username)
+// 	if err != nil {
+// 		if err == pgx.ErrNoRows {
+// 			http.Error(w, "User not found", http.StatusNotFound)
+// 		} else {
+// 			http.Error(w, "Failed to find user", http.StatusInternalServerError)
+// 		}
+// 		return
+// 	}
+
+// 	// Проверяем, что пользователь еще не в чате
+// 	var userInChat bool
+// 	err = db.Pool.QueryRow(r.Context(), `
+//         SELECT EXISTS(SELECT 1 FROM chat_users WHERE chat_id = $1 AND user_id = $2)`, chatID, userIDToAdd).Scan(&userInChat)
+// 	if err != nil {
+// 		http.Error(w, "Failed to check user in chat", http.StatusInternalServerError)
+// 		return
+// 	}
+// 	if userInChat {
+// 		http.Error(w, "User is already in the chat", http.StatusBadRequest)
+// 		return
+// 	}
+
+// 	// Добавляем пользователя в чат
+// 	_, err = db.Pool.Exec(r.Context(), `
+//         INSERT INTO chat_users (chat_id, user_id) 
+//         VALUES ($1, $2)`, chatID, userIDToAdd)
+// 	if err != nil {
+// 		http.Error(w, "Failed to add user to chat", http.StatusInternalServerError)
+// 		return
+// 	}
+
+// 	w.WriteHeader(http.StatusOK)
+// 	w.Write([]byte(`{"message": "User ` + strconv.Itoa(userIDToAdd) + ` added to chat ` + chatID + `"}`))
+// }
+
+// Покинуть чат
+
+// func LeaveChat(w http.ResponseWriter, r *http.Request) {
+// 	vars := mux.Vars(r)
+// 	chatID := vars["chat_id"]
+// 	if chatID == "" {
+// 		http.Error(w, "Chat ID is required", http.StatusBadRequest)
+// 		return
+// 	}
+
+// 	userID := r.Context().Value("user_id").(int)
+
+// 	// Удаляем пользователя из чата
+// 	_, err := db.Pool.Exec(r.Context(), "DELETE FROM chat_users WHERE chat_id = $1 AND user_id = $2", chatID, userID)
+// 	if err != nil {
+// 		http.Error(w, "Failed to leave chat", http.StatusInternalServerError)
+// 		return
+// 	}
+
+// 	w.WriteHeader(http.StatusOK)
+// 	w.Write([]byte(`{"message": "Left chat"}`))
+// }
+
+// // Удаление пользователей для администратора
+
+// func RemoveUserFromChat(w http.ResponseWriter, r *http.Request) {
+// 	vars := mux.Vars(r)
+// 	chatID := vars["chat_id"]
+// 	if chatID == "" {
+// 		http.Error(w, "Chat ID is required", http.StatusBadRequest)
+// 		return
+// 	}
+
+// 	// Получаем username из query-параметра
+// 	username := r.URL.Query().Get("username")
+// 	if username == "" {
+// 		http.Error(w, "Username is required", http.StatusBadRequest)
+// 		return
+// 	}
+
+// 	currentUserID := r.Context().Value("user_id").(int)
+
+// 	// Проверяем, что текущий пользователь является администратором чата
+// 	isAdmin, err := IsAdmin(chatID, currentUserID)
+// 	if err != nil {
+// 		http.Error(w, "Chat not found", http.StatusNotFound)
+// 		return
+// 	}
+// 	if !isAdmin {
+// 		http.Error(w, "Removing forbidden", http.StatusForbidden)
+// 		return
+// 	}
+
+// 	userIDToRemove, err := GetUser(username)
+// 	if err != nil {
+// 		if err == pgx.ErrNoRows {
+// 			http.Error(w, "User not found", http.StatusNotFound)
+// 		} else {
+// 			http.Error(w, "Failed to find user", http.StatusInternalServerError)
+// 		}
+// 		return
+// 	}
+
+// 	// Удаляем пользователя из чата
+// 	_, err = db.Pool.Exec(r.Context(), `
+//         DELETE FROM chat_users 
+//         WHERE chat_id = $1 AND user_id = $2`, chatID, userIDToRemove)
+// 	if err != nil {
+// 		http.Error(w, "Failed to remove user from chat", http.StatusInternalServerError)
+// 		return
+// 	}
+
+// 	w.WriteHeader(http.StatusOK)
+// 	w.Write([]byte(`{"message": "User ` + strconv.Itoa(userIDToRemove) + ` removed from chat ` + chatID + `"}`))
+// }
